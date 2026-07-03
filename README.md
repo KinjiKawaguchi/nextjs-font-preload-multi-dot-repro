@@ -1,11 +1,11 @@
-# next/font preload not emitted with multi-dot `pageExtensions`
+# Control (font preload works)
 
-Minimal reproduction for a Next.js issue: with a multi-dot `pageExtensions`
-value such as `['page.tsx']` (documented as supported), `<link rel="preload"
-as="font">` tags are not emitted, while CSS and JS preload tags for the same
-route are emitted correctly.
+This branch is the control for the `main` branch's reproduction. It uses the
+default `pageExtensions` (no `pageExtensions` key set) and standard
+`layout.tsx` / `page.tsx` filenames. Everything else — the `next/font/google`
+import of Inter, the JSX — is identical to `main`.
 
-## Reproduce
+## Verify
 
 ```bash
 pnpm install
@@ -19,32 +19,19 @@ In another terminal:
 curl -s http://localhost:3000/ | grep -oE '<link[^>]*rel="preload"[^>]*>'
 ```
 
-**Observed:** no `<link rel="preload" as="font">` tag is printed. Only the
-script preload tag is present.
+You will see a `<link rel="preload" as="font"...>` tag pointing to Inter's
+primary latin `.woff2` — the exact thing `main` is missing.
 
-**Expected:** at least one font preload tag pointing to a `.woff2` file, as
-happens on any default Next.js App Router project using `next/font`.
+## Compare with `main`
 
-## Control
-
-Remove the multi-dot config to confirm the difference:
-
-```diff
-// next.config.ts
-- pageExtensions: ["page.tsx"],
+```bash
+git diff main..control -- .
 ```
 
-Also rename `app/layout.page.tsx` → `app/layout.tsx` and
-`app/page.page.tsx` → `app/page.tsx`. Rebuild and repeat the curl. Font
-preload tags now appear.
+The diff is limited to:
+- `next.config.ts` — removes the `pageExtensions: ['page.tsx']` line
+- `app/layout.page.tsx` → `app/layout.tsx` (rename only)
+- `app/page.page.tsx` → `app/page.tsx` (rename only)
 
-## Notes
-
-- Docs page describing multi-dot `pageExtensions`:
-  <https://nextjs.org/docs/app/api-reference/config/next-config-js/pageExtensions>
-- The affected file resolves manifest keys with
-  `filePath.replace(/\.[^.]+$/, '')`, which strips exactly one extension
-  segment. The font manifest (`next-font-manifest-plugin`) writes keys with
-  all extensions stripped; the CSS/JS manifest (`flight-manifest-plugin`)
-  writes keys with only the final extension stripped. The two formats
-  diverge only when `pageExtensions` contains more than one dot.
+No source-code change, only file-name / config change. That isolates the
+trigger to the multi-dot `pageExtensions` mechanism.
