@@ -25,18 +25,28 @@ script preload tag is present.
 **Expected:** at least one font preload tag pointing to a `.woff2` file, as
 happens on any default Next.js App Router project using `next/font`.
 
-## Control
+## Control (working case is on the `control` branch)
 
-Remove the multi-dot config to confirm the difference:
+The [`control`](../../tree/control) branch has the same code but with
+`pageExtensions` removed and files renamed back to `layout.tsx` /
+`page.tsx`. Building it emits the font preload tag as expected.
 
-```diff
-// next.config.ts
-- pageExtensions: ["page.tsx"],
+```bash
+git checkout control
+pnpm build && pnpm start
+curl -s http://localhost:3000/ | grep -oE '<link[^>]*rel="preload"[^>]*>'
+# -> <link rel="preload" href="/_next/static/media/....woff2" as="font" ...>
 ```
 
-Also rename `app/layout.page.tsx` → `app/layout.tsx` and
-`app/page.page.tsx` → `app/page.tsx`. Rebuild and repeat the curl. Font
-preload tags now appear.
+To see the entire diff that toggles the bug on / off:
+
+```bash
+git diff main..control -- .
+```
+
+The diff is limited to `next.config.ts` and two file renames — no source
+change — which isolates the trigger to the multi-dot `pageExtensions`
+mechanism.
 
 ## Notes
 
